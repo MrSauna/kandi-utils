@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata: 
+  labels: 
+    app: ip-tools
+    tier: frontend
+  name: ip-tools
+spec: 
+  replicas: 3
+  selector: 
+    matchLabels: 
+      tier: frontend
+  template: 
+    metadata: 
+      labels: 
+        tier: frontend
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            tier: frontend   
+      containers:
+      - name: ip-tools
+        image: mrsauna/ubuntu
+        ports:
+        - containerPort: 80

@@ -1,0 +1,111 @@
+---
+- name: Create a Kind cluster
+  hosts: nodes
+  become: true
+
+  tasks:
+
+    - name: Install configs
+      tags: files
+      block:
+        - name: Install kind flannel cluster configuration
+          ansible.builtin.template:
+            src: templates/kind-flannel.yaml.j2
+            dest: /root/kandi-kubernetes/kind-flannel.yaml
+            mode: "644"
+
+        - name: Install kind calico cluster configuration
+          ansible.builtin.template:
+            src: templates/kind-calico.yaml.j2
+            dest: /root/kandi-kubernetes/kind-calico.yaml
+            mode: "644"
+
+        - name: Install flannel yml
+          ansible.builtin.template:
+            src: templates/kube-flannel.yml.j2
+            dest: /root/kandi-kubernetes/kube-flannel.yml
+            mode: "644"
+
+        - name: Install service template
+          ansible.builtin.template:
+            src: templates/service.yaml.j2
+            dest: /root/kandi-kubernetes/service.yaml
+            mode: "644"
+
+        - name: Calico custom resources
+          ansible.builtin.template:
+            src: templates/custom-resources.yaml.j2
+            dest: /root/kandi-kubernetes/calico-custom-resources.yaml
+            mode: "644"
+
+        - name: Install calico alias
+          ansible.builtin.lineinfile:
+            path: /root/.bashrc
+            line: alias calicoctl="kubectl exec -i -n kube-system calicoctl -- /calicoctl"
+            regexp: '^alias calicoctl'
+
+
+    - name: Install flannel cluster
+      tags: flannel
+      when: false
+      block:
+
+        - name: Create a Kind cluster flannel
+          ansible.builtin.command:
+            cmd: kind create cluster --config /root/kandi-kubernetes/kind-flannel.yaml
+          changed_when: true
+
+        - name: Wait init
+          ansible.builtin.pause:
+            seconds: 5
+
+        - name: Apply flannel
+          ansible.builtin.command:
+            cmd: kubectl apply -f /root/kandi-kubernetes/kube-flannel.yml
+          changed_when: true
+
+        - name: Wait flannel
+          ansible.builtin.pause:
+            seconds: 5
+
+        - name: Apply service plan
+          ansible.builtin.command:
+            cmd: kubectl apply -f /root/kandi-kubernetes/service.yaml
+          changed_when: true
+
+
+    - name: Install calico cluster
+      tags: calico
+      block:
+
+        - name: Create a Kind cluster calico
+          ansible.builtin.command:
+            cmd: kind create cluster --config /root/kandi-kubernetes/kind-calico.yaml
+          changed_when: true
+
+        - name: Wait init
+          ansible.builtin.pause:
+            seconds: 5
+
+        - name: Install tigera operator
+          ansible.builtin.command:
+            cmd: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
+          changed_when: true
+
+        - name: Wait init
+          ansible.builtin.pause:
+            seconds: 5
+
+        - name: Install calico
+          ansible.builtin.command:
+            cmd: kubectl create -f /root/kandi-kubernetes/calico-custom-resources.yaml
+          changed_when: true
+
+        - name: Wait init
+          ansible.builtin.pause:
+            seconds: 5
+
+        - name: Install calicoctl
+          ansible.builtin.command:
+            cmd: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calicoctl.yaml
+          changed_when: true

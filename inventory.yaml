@@ -1,0 +1,6 @@
+all:
+  children:
+    nodes:
+      hosts:
+        pro-misc.kiuas.men
+

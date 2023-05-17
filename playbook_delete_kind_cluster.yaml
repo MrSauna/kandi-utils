@@ -1,0 +1,24 @@
+---
+- name: Delete Kind cluster
+  hosts: nodes
+  become: true
+
+  tasks:
+
+    - name: Delete kind cluster default
+      ansible.builtin.command:
+        cmd: kind delete cluster
+      changed_when: true
+      tags: calico
+
+    - name: Delete kind cluster flannel
+      ansible.builtin.command:
+        cmd: kind delete cluster --name flannel
+      changed_when: true
+      tags: flannel
+
+    - name: Delete kind cluster calico
+      ansible.builtin.command:
+        cmd: kind delete cluster --name calico
+      changed_when: true
+      tags: calico
